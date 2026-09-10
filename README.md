@@ -247,18 +247,6 @@ python run.py server
 The application will run at `http://localhost:5000`.
 
 ---
-
-## Interview Discussion Topics
-
-1. **Hash-Based Sharding vs. Range-Based Sharding**:
-   - MD5 hash-based routing distributes write operations evenly across all shards, avoiding write hotspots associated with sequential ID ranges.
-2. **Scatter-Gather Query Routing**:
-   - Queries spanning multiple nodes (such as listing all doctors) execute in parallel across nodes and are merged in the application layer.
-3. **Write-Ahead Logging and Recovery**:
-   - Before-images and after-images are written with Log Sequence Numbers (LSNs) to support atomic rollback and crash recovery (Analysis, Redo, Undo phases).
-4. **Compensating Transactions**:
-   - Multi-step write operations (e.g. inserting into central authentication and a remote shard) include rollback compensation if a subsequent step fails.
-
 ---
 
 ## License
