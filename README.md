@@ -9,13 +9,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 <p align="center">
+  <a href="#project-overview">Overview</a> •
   <a href="#system-architecture">Architecture</a> •
   <a href="#implemented-components">Components</a> •
-  <a href="#custom-acid-storage-engine">Storage Engine</a> •
-  <a href="#distributed-database-sharding">Sharding</a> •
   <a href="#benchmarks-and-performance">Benchmarks</a> •
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#interview-discussion-topics">Interview Topics</a>
+  <a href="#project-structure">Project Structure</a> •
+  <a href="#quick-start">Quick Start</a>
 </p>
 
 ---
@@ -246,7 +245,6 @@ python run.py server
 ```
 The application will run at `http://localhost:5000`.
 
----
 ---
 
 ## License
