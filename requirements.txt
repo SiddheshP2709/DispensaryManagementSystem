@@ -1,0 +1,19 @@
+# Web Application & REST API Framework
+Flask>=3.0.0
+Werkzeug>=3.0.0
+PyJWT>=2.8.0
+bcrypt>=4.1.2
+python-dotenv>=1.0.0
+
+# Database Connectivity
+mysql-connector-python>=8.3.0
+
+# Data Analysis & Benchmarking
+pandas>=2.1.0
+matplotlib>=3.8.0
+numpy>=1.24.0
+
+# Load Testing & Verification
+locust>=2.20.0
+requests>=2.31.0
+pytest>=7.4.0
