@@ -1,20 +1,20 @@
-# Custom B+ Tree Storage & ACID Transaction Engine
+# Custom B+ Tree Storage and ACID Transaction Engine
 
-## 🔬 Overview
+## Overview
 
-As part of the database systems implementation, we engineered a **custom Relational Storage & ACID Transaction Engine in Python from scratch**. This engine demonstrates low-level database kernel concepts including balanced tree indexing, write-ahead logging (WAL), crash recovery algorithms, and strict concurrency control.
+As part of the database systems coursework, we implemented a custom storage and transaction engine in Python. The engine implements core database kernel mechanisms, including balanced tree indexing, write-ahead logging (WAL), crash recovery, and transaction concurrency management.
 
 ---
 
-## 🌲 B+ Tree Indexing Subsystem (`core_engine/bplustree.py`)
+## B+ Tree Indexing Subsystem (`core_engine/bplustree.py`)
 
-A B+ Tree of configurable order $M$ serves as the primary indexed storage mechanism for tabular data.
+A B+ Tree of configurable order $M$ serves as the indexing mechanism for table data.
 
 ### Structural Properties
-- **Balanced Multilevel Hierarchy**: All leaf nodes reside at the exact same depth ($O(\log_M N)$ height).
-- **High Fan-Out**: Non-leaf index nodes store up to $M - 1$ search keys and $M$ child pointers.
-- **Linked Leaf Chain**: Leaf nodes store the actual record payloads and maintain bidirectional pointers (`prev_leaf` and `next_leaf`) to enable rapid range scanning.
-- **Dynamic Node Splitting & Merging**: Proactively balances upon reaching overflow capacity ($\ge M$ keys).
+- **Balanced Multilevel Hierarchy**: All leaf nodes are maintained at the same tree depth ($O(\log_M N)$).
+- **Fan-Out**: Non-leaf nodes store up to $M - 1$ search keys and $M$ child pointers.
+- **Linked Leaf Nodes**: Leaf nodes store the actual key-value records and maintain forward and backward pointers (`next_leaf`, `prev_leaf`) to support range scans.
+- **Node Splitting and Merging**: Splits nodes upon reaching capacity ($\ge M$ keys) and rebalances during deletions.
 
 ```
                       ┌───────────────┐
@@ -34,17 +34,17 @@ A B+ Tree of configurable order $M$ serves as the primary indexed storage mechan
 └─────┘   └─────┘   └─────┘     └─────┘   └─────┘   └─────┘
 ```
 
-### Search Time Complexity Comparison
-- **Point Search**: $O(\log N)$ via B+ Tree vs $O(N)$ via Linear Scan.
-- **Range Query**: $O(\log N + K)$ (where $K$ is the number of qualifying items in the range) by locating the starting leaf and traversing sequential pointers.
+### Search Time Complexity
+- **Point Search**: $O(\log N)$ via B+ Tree index vs $O(N)$ via linear scan.
+- **Range Query**: $O(\log N + K)$, where $K$ is the number of records returned within the range bounds.
 
 ---
 
-## 📜 Write-Ahead Logging (WAL) Subsystem (`core_engine/wal.py`)
+## Write-Ahead Logging (WAL) Subsystem (`core_engine/wal.py`)
 
-To satisfy the **Durability** and **Atomicity** criteria of ACID:
-1. **Append-Only Serialization**: Every mutating action (`BEGIN`, `INSERT`, `UPDATE`, `DELETE`, `COMMIT`, `ROLLBACK`) is serialized to an on-disk append-only log file before modifying the in-memory tree buffer.
-2. **Before-Image Logging**: For `UPDATE` and `DELETE` operations, the log records the exact previous state of the row to enable deterministic rollback.
+To support transaction durability and rollback:
+1. **Append-Only Log**: Mutating operations (`BEGIN`, `INSERT`, `UPDATE`, `DELETE`, `COMMIT`, `ROLLBACK`) are written to an on-disk log file before applying updates to in-memory tables.
+2. **Before-Image Logging**: For `UPDATE` and `DELETE` operations, the log stores the prior state of the row to enable rollback execution.
 
 ```json
 {"lsn": 101, "txn_id": 1, "op": "BEGIN", "table": null, "key": null, "before": null, "after": null}
@@ -54,42 +54,42 @@ To satisfy the **Durability** and **Atomicity** criteria of ACID:
 
 ---
 
-## 🛡️ ARIES-Style Crash Recovery Protocol (`core_engine/recovery.py`)
+## Crash Recovery Protocol (`core_engine/recovery.py`)
 
-If the DBMS process terminates unexpectedly (e.g., power loss or kill signal), `recovery.recover()` executes on startup:
+If the application terminates unexpectedly, `recovery.recover()` executes on startup to restore consistency:
 
 ```
-[Crash Occurs] ──► System Restart
-                         │
-                         ▼
-             ┌───────────────────────┐
-             │    1. Analysis Phase  │  Scans WAL to identify Active (Incomplete),
-             │                       │  Committed, and Aborted transactions.
-             └───────────┬───────────┘
-                         │
-                         ▼
-             ┌───────────────────────┐
-             │     2. Redo Phase     │  Replays all logged operations to restore
-             │                       │  the exact state prior to crash.
-             └───────────┬───────────┘
-                         │
-                         ▼
-             ┌───────────────────────┐
-             │     3. Undo Phase     │  Reverses operations of all active uncommitted
-             │                       │  transactions in reverse LSN order.
-             └───────────────────────┘
+[System Termination] ──► Startup Recovery
+                              │
+                              ▼
+                  ┌───────────────────────┐
+                  │    1. Analysis Phase  │  Scans WAL to identify Active (Incomplete),
+                  │                       │  Committed, and Aborted transactions.
+                  └───────────┬───────────┘
+                              │
+                              ▼
+                  ┌───────────────────────┐
+                  │     2. Redo Phase     │  Replays logged operations to reconstruct
+                  │                       │  state prior to shutdown.
+                  └───────────┬───────────┘
+                              │
+                              ▼
+                  ┌───────────────────────┐
+                  │     3. Undo Phase     │  Reverses operations of all uncommitted
+                  │                       │  transactions in reverse LSN order.
+                  └───────────────────────┘
 ```
 
 ---
 
-## 🔒 Transaction Manager & Concurrency Control (`core_engine/transaction_manager.py`)
+## Transaction Manager and Concurrency Control (`core_engine/transaction_manager.py`)
 
-- **Strict 2-Phase Locking (2PL)**: Acquires shared read locks and exclusive write locks during transaction execution and holds write locks until `COMMIT` or `ROLLBACK`.
-- **Durability Snapshots**: Upon transaction commit, the database state is checkpointed to persistent storage (`db_snapshot.json`).
-- **Comprehensive Validation**: Tested against 6 rigorous ACID scenarios:
-  1. Full rollback reverts all inserts/updates.
-  2. Partial failure mid-transaction handles exceptions cleanly.
-  3. Consistency validation prevents invalid table modifications.
-  4. Durability test confirms committed records survive restarts.
-  5. Crash recovery test verifies that uncommitted in-flight operations are undone.
-  6. Isolation test guarantees that aborted transactions do not leak dirty state to concurrent transactions.
+- **Two-Phase Locking (2PL)**: Manages shared read locks and exclusive write locks during transaction execution and releases locks upon commit or rollback.
+- **State Checkpointing**: Upon commit, the current state can be checkpointed to persistent storage (`db_snapshot.json`).
+- **Validation Test Suite**: Evaluated across 6 test cases:
+  1. Full rollback reverts all inserts and updates.
+  2. Partial failure mid-transaction handles exceptions.
+  3. Invalid table access is rejected without side effects.
+  4. Committed data persists across simulated restarts.
+  5. Incomplete transactions are reversed during WAL crash recovery.
+  6. Aborted transactions do not affect committed transactions.
